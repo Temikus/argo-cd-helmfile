@@ -1,0 +1,71 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "rebaseWhen": "behind-base-branch",
+  "automerge": false,
+  "prConcurrentLimit": 5,
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Single-value tool ARGs (datasource=github-releases; verified at build time against an upstream checksum file). Scoped to github-releases so it does not also match the github-tags plugin block below.",
+      "managerFilePatterns": [
+        "/(^|/)Dockerfile$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>github-releases) depName=(?<depName>\\S+)(?: extractVersion=(?<extractVersion>\\S+))?(?: versioning=(?<versioning>\\S+))?\\s*\\nARG \\w+_VERSION=\"(?<currentValue>[^\"]+)\""
+      ],
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}semver{{/if}}"
+    },
+    {
+      "customType": "regex",
+      "description": "Helm plugins: ARG version plus a paired commit-SHA pin, kept in sync via digest lookup",
+      "managerFilePatterns": [
+        "/(^|/)Dockerfile$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>github-tags) depName=(?<depName>\\S+)\\s*\\nARG \\w+_VERSION=\"(?<currentValue>[^\"]+)\"\\s*\\nARG \\w+_SHA=\"(?<currentDigest>[0-9a-f]+)\""
+      ],
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Stay on the helm v3 line (ARG is HELM3_VERSION; helmfile drives helm3, v4 is a breaking major)",
+      "matchDepNames": [
+        "helm/helm"
+      ],
+      "allowedVersions": "<4"
+    },
+    {
+      "description": "Group the three helm plugins into a single PR",
+      "matchDepNames": [
+        "databus23/helm-diff",
+        "aslafy-z/helm-git",
+        "jkroepke/helm-secrets"
+      ],
+      "groupName": "helm plugins"
+    },
+    {
+      "description": "age and yq carry pinned per-arch sha256 hashes that Renovate cannot regenerate; flag so the merger runs `just update-checksums`",
+      "matchDepNames": [
+        "FiloSottile/age",
+        "mikefarah/yq"
+      ],
+      "addLabels": [
+        "needs-just-checksums"
+      ],
+      "prBodyNotes": [
+        ":warning: This bumps a tool whose per-arch SHA256 is pinned in the Dockerfile. Before merging, run `just update-checksums`, paste the printed values into the `case` blocks, and push to this branch \u2014 otherwise the image build will fail the checksum verification."
+      ]
+    }
+  ]
+}

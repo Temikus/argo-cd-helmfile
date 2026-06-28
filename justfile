@@ -23,6 +23,10 @@ build-multiarch tag=image:
 lint:
     docker run --rm -i hadolint/hadolint hadolint - < Dockerfile
 
+# Validate renovate.json (pin @latest to match the rolling Mend app; --strict)
+renovate-validate:
+    npx --yes --package renovate@latest -- renovate-config-validator --strict renovate.json
+
 # Smoke-test the built image: print the version of each bundled tool
 validate tag=image:
     #!/usr/bin/env bash

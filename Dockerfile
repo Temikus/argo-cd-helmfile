@@ -82,27 +82,37 @@ RUN groupadd -g $ARGOCD_USER_ID argocd && \
 #    apt-get clean && \
 #    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# binary versions
+# binary versions. The `# renovate:` lines let Renovate bump each pin (see
+# renovate.json); they must sit immediately above their ARG.
 # https://github.com/FiloSottile/age/releases
+# renovate: datasource=github-releases depName=FiloSottile/age
 ARG AGE_VERSION="v1.3.1"
 # install via apt for now
 #ARG JQ_VERSION="1.6"
 # https://github.com/helm/helm/releases (kept on v3.x; helmfile drives helm3, v4 is a breaking major)
+# renovate: datasource=github-releases depName=helm/helm
 ARG HELM3_VERSION="v3.21.2"
 # https://github.com/helmfile/helmfile/releases
+# renovate: datasource=github-releases depName=helmfile/helmfile
 ARG HELMFILE_VERSION="1.6.0"
 # https://github.com/kubernetes-sigs/kustomize/releases
+# renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize/v(?<version>.+)$
 ARG KUSTOMIZE5_VERSION="5.8.1"
 # https://github.com/getsops/sops/releases
+# renovate: datasource=github-releases depName=getsops/sops
 ARG SOPS_VERSION="v3.13.1"
 # https://github.com/mikefarah/yq/releases
+# renovate: datasource=github-releases depName=mikefarah/yq
 ARG YQ_VERSION="v4.53.3"
 
 # relevant for kubectl if installed
+# renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
 ARG KUBESEAL_VERSION="0.38.1"
 # curl -v -L 'https://dl.k8s.io/release/stable.txt'
+# renovate: datasource=github-releases depName=kubernetes/kubernetes
 ARG KUBECTL_VERSION="v1.36.2"
 # https://github.com/kubernetes-sigs/krew/releases/
+# renovate: datasource=github-releases depName=kubernetes-sigs/krew
 ARG KREW_VERSION="v0.5.0"
 
 # Each binary is downloaded then verified against its publisher's SHA256 before
@@ -201,12 +211,15 @@ ENV PATH="${KREW_ROOT}/bin:$PATH"
 # bumping a version. (helm-diff additionally pulls a prebuilt binary in its own
 # install hook, which remains version-pinned and upstream-controlled.)
 # https://github.com/databus23/helm-diff/releases
+# renovate: datasource=github-tags depName=databus23/helm-diff
 ARG HELM_DIFF_VERSION="3.15.10"
 ARG HELM_DIFF_SHA="5873f8d94712f014dc2bb329acae63b8ffbf569b"
 # https://github.com/aslafy-z/helm-git/releases
+# renovate: datasource=github-tags depName=aslafy-z/helm-git
 ARG HELM_GIT_VERSION="1.5.2"
 ARG HELM_GIT_SHA="8f910e377bf743cc07ce963a696b1e7929aebb80"
 # https://github.com/jkroepke/helm-secrets/releases
+# renovate: datasource=github-tags depName=jkroepke/helm-secrets
 ARG HELM_SECRETS_VERSION="4.7.7"
 ARG HELM_SECRETS_SHA="f02f8df1c57af3c65f531bb0e0bc0859a8540845"
 

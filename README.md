@@ -1,4 +1,5 @@
 ![Build status](https://img.shields.io/github/actions/workflow/status/temikus/argo-cd-helmfile/main.yml?branch=master&style=flat-square)
+![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen?style=flat-square&logo=renovatebot)
 
 # Intro
 
