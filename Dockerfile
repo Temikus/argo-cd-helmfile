@@ -8,7 +8,23 @@ ARG BASE_IMAGE=docker.io/library/ubuntu:24.04@sha256:786a8b558f7be160c6c8c4a54f9
 
 FROM $BASE_IMAGE
 
-LABEL org.opencontainers.image.source="https://github.com/temikus/argo-cd-helmfile"
+# Static image metadata. These are baked in so every build (including local
+# `docker build`) carries them. CI additionally stamps the dynamic OCI labels
+# (created, revision, version) via docker/metadata-action, which take precedence
+# over the matching keys below. `maintainer` is the classic Docker label and is
+# not emitted by metadata-action, so it only lives here. Keep
+# org.opencontainers.image.base.digest in sync with the BASE_IMAGE ARG digest above.
+LABEL maintainer="temikus (https://github.com/temikus)" \
+      org.opencontainers.image.title="argo-cd-helmfile" \
+      org.opencontainers.image.description="Argo CD ConfigManagementPlugin (CMP) sidecar that renders manifests with helmfile, bundled with helm, helmfile, kustomize, sops, age, kubeseal, kubectl and krew." \
+      org.opencontainers.image.authors="Artem Yakimenko (https://github.com/temikus)" \
+      org.opencontainers.image.vendor="temikus" \
+      org.opencontainers.image.url="https://github.com/temikus/argo-cd-helmfile" \
+      org.opencontainers.image.source="https://github.com/temikus/argo-cd-helmfile" \
+      org.opencontainers.image.documentation="https://github.com/temikus/argo-cd-helmfile/blob/master/README.md" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.base.name="docker.io/library/ubuntu:24.04" \
+      org.opencontainers.image.base.digest="sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54"
 
 # Fail RUN pipelines (the many `wget ... | tar` below) on the first failing
 # command instead of masking a failed download with a succeeding tar.
