@@ -1,9 +1,17 @@
 ![Build status](https://img.shields.io/github/actions/workflow/status/temikus/argo-cd-helmfile/main.yml?branch=master&style=flat-square)
 ![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen?style=flat-square&logo=renovatebot)
+![License](https://img.shields.io/github/license/temikus/argo-cd-helmfile?style=flat-square)
 
 # Intro
 
 Support for `helmfile` with `argo-cd`.
+
+> This is a maintained fork of
+> [`travisghansen/argo-cd-helmfile`](https://github.com/travisghansen/argo-cd-helmfile).
+> It tracks upstream's plugin behaviour while hardening the build and shipping a
+> ready-to-use multi-arch container image (see [Image](#image) below): every
+> bundled tool is version-pinned and checksum-verified, dependencies are kept
+> current with Renovate, and images are published to GHCR with immutable tags.
 
 `argo-cd` already supports `helm` in 2 distinct ways, why is this useful?
 
@@ -27,6 +35,32 @@ Consider these implications for your environment and act appropriately.
 - https://github.com/roboll/helmfile#templating (`exec` description)
 - https://github.com/helmfile/helmfile/pull/1 (can disable `exec` using env vars)
 - the execution pod/context is the `argocd-repo-server`
+
+# Image
+
+Images are published to `ghcr.io/temikus/argo-cd-helmfile` by the CI workflow.
+
+- **Multi-arch**: `linux/amd64` and `linux/arm64`.
+- **Immutable tags only**: every commit produces a `sha-<full-commit>` tag, and a
+  release tag push (`v*`) produces the matching git tag. There is **no** `latest`,
+  `master`, or branch tag — always pin to a `sha-<commit>` or release tag.
+- **Provenance + SBOM**: build attestations are attached to every push.
+- **Supply chain**: every bundled binary is verified against its publisher's
+  SHA256 before install (upstream checksum file, or a pinned per-arch hash where
+  upstream publishes none); helm plugins are cloned at a tag and the build aborts
+  if that tag no longer points at the pinned commit.
+
+Bundled tooling (versions are pinned in the `Dockerfile` and bumped by Renovate):
+
+- `helmfile` 1.x, `helm` v3
+- `sops`, `age` / `age-keygen` — secrets (sops/age integration)
+- `kustomize`, `yq`, `jq`
+- `kubectl`, `kubectl-krew`, `kubeseal`
+- `git` / `git-lfs`
+- helm plugins: `helm-diff`, `helm-git`, `helm-secrets`
+
+Base image is Ubuntu 24.04 (pinned by digest); the plugin runs as the non-root
+`argocd` user (UID 999).
 
 # Installation
 
@@ -74,6 +108,12 @@ repoServer:
 
 ## ConfigMap (deprecated)
 
+> **Deprecated.** The ConfigMap-based plugin mechanism was removed in Argo CD ≥ 2.4.
+> Use the [Sidecar](#sidecar) approach above with the published GHCR image instead.
+> The init-container example below downloads an archived `roboll/helmfile` v0.138.7
+> binary and is preserved here only for historical reference — do not use it for new
+> deployments.
+
 ```yaml
     configManagementPlugins: |
       - name: helmfile
@@ -96,7 +136,7 @@ repoServer:
     image: alpine:3.8
     command: [sh, -c]
     args:
-      - wget -qO /custom-tools/argo-cd-helmfile.sh https://raw.githubusercontent.com/travisghansen/argo-cd-helmfile/master/src/argo-cd-helmfile.sh &&
+      - wget -qO /custom-tools/argo-cd-helmfile.sh https://raw.githubusercontent.com/temikus/argo-cd-helmfile/master/src/argo-cd-helmfile.sh &&
         chmod +x /custom-tools/argo-cd-helmfile.sh &&
         wget -qO /custom-tools/helmfile https://github.com/roboll/helmfile/releases/download/v0.138.7/helmfile_linux_amd64 &&
         chmod +x /custom-tools/helmfile
@@ -213,7 +253,21 @@ injected using an `initContainers` or stored in the application git repository.
 
 # Development
 
+Common tasks are automated with [`just`](https://github.com/casey/just). Run
+`just` with no arguments to list the available recipes:
+
+- `just build [tag]` — build the image for the local arch and load it into Docker
+- `just build-multiarch [tag]` — build the full `linux/amd64,linux/arm64` image
+- `just lint` — lint the `Dockerfile` with hadolint
+- `just validate [tag]` — smoke-test a built image (prints each bundled tool's version)
+- `just renovate-validate` — validate `renovate.json` against the Renovate schema
+- `just update-checksums` — recompute the pinned per-arch SHA256 for `age` and `yq`
+  (run after bumping `AGE_VERSION` / `YQ_VERSION`)
+- `just update-plugin-shas` — resolve each helm-plugin tag to the commit SHA pinned
+  in the `Dockerfile`
+
+Format the shell sources before committing:
+
 ```
-# format before commit
 shfmt -i 2 -ci -w src/argo-cd-helmfile.sh
 ```
