@@ -10,6 +10,10 @@ FROM $BASE_IMAGE
 
 LABEL org.opencontainers.image.source="https://github.com/temikus/argo-cd-helmfile"
 
+# Fail RUN pipelines (the many `wget ... | tar` below) on the first failing
+# command instead of masking a failed download with a succeeding tar.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV ARGOCD_USER_ID=999
 
@@ -29,7 +33,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN groupadd -g $ARGOCD_USER_ID argocd && \
-  useradd -r -u $ARGOCD_USER_ID -g argocd argocd && \
+  useradd -r -l -u $ARGOCD_USER_ID -g argocd argocd && \
   mkdir -p /home/argocd && \
   chown argocd:0 /home/argocd && \
   chmod g=u /home/argocd
