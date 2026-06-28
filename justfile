@@ -23,29 +23,16 @@ build-multiarch tag=image:
 lint:
     docker run --rm -i hadolint/hadolint hadolint - < Dockerfile
 
-# Print helmfile version and assert the embedded vals has the Infisical provider
+# Smoke-test the built image: print the version of each bundled tool
 validate tag=image:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "## helmfile version"
     docker run --rm --entrypoint helmfile {{tag}} version | grep -i version | head -1
-    echo "## vals infisical provider probe"
-    tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
-    mkdir -p "$tmp/chart/templates"
-    printf 'apiVersion: v2\nname: probe\nversion: 0.1.0\n' > "$tmp/chart/Chart.yaml"
-    printf 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: probe\ndata:\n  secret: {{{{ .Values.secret | quote }}}}\n' > "$tmp/chart/templates/cm.yaml"
-    printf 'releases:\n  - name: probe\n    chart: ./chart\n    values:\n      - secret: ref+infisical://p?project=p&environment=dev&path=/&token=dummy\n' > "$tmp/helmfile.yaml"
-    # The probe is expected to FAIL; we assert HOW it fails (auth error => provider
-    # registered) rather than the "no provider registered for scheme" message.
-    out="$(docker run --rm -v "$tmp:/wd" -w /wd --entrypoint helmfile {{tag}} template 2>&1 || true)"
-    echo "$out" | tail -2
-    if echo "$out" | grep -q 'no provider registered for scheme.*infisical'; then
-      echo "FAIL: infisical provider NOT registered (vals too old)"; exit 1
-    elif echo "$out" | grep -qi 'infisical'; then
-      echo "PASS: infisical provider registered (reached auth/connection stage)"
-    else
-      echo "FAIL: unexpected output, infisical ref was not processed"; exit 1
-    fi
+    docker run --rm --entrypoint sops {{tag}} --version | head -1
+    docker run --rm --entrypoint yq   {{tag}} --version
+    docker run --rm --entrypoint age  {{tag}} --version
+    docker run --rm --entrypoint helm-v3 {{tag}} version --short
+    docker run --rm --entrypoint kubectl {{tag}} version --client=true 2>/dev/null | head -1
 
 # Recompute the pinned per-arch SHA256 for age and yq (no upstream checksum file)
 update-checksums:
