@@ -1,0 +1,8 @@
+# Only src/ and plugin.yaml are needed by the build; keep the context minimal.
+.git
+.github
+.gitignore
+.dockerignore
+*.md
+CHANGELOG.md
+LICENSE

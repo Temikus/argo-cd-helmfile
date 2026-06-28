@@ -14,7 +14,6 @@ LABEL org.opencontainers.image.source="https://github.com/temikus/argo-cd-helmfi
 # command instead of masking a failed download with a succeeding tar.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-ENV DEBIAN_FRONTEND=noninteractive
 ENV ARGOCD_USER_ID=999
 
 ARG TARGETPLATFORM
@@ -24,7 +23,10 @@ RUN echo "I am running on final $BUILDPLATFORM, building for $TARGETPLATFORM"
 
 USER root
 
-RUN apt-get update && apt-get install --no-install-recommends -y \
+# DEBIAN_FRONTEND is scoped to this layer only (export), so it does not leak
+# into the runtime image and affect later `apt` invocations by users.
+RUN export DEBIAN_FRONTEND=noninteractive && \
+  apt-get update && apt-get install --no-install-recommends -y \
   ca-certificates \
   git git-lfs \
   wget \
@@ -85,7 +87,6 @@ RUN groupadd -g $ARGOCD_USER_ID argocd && \
 ARG AGE_VERSION="v1.3.1"
 # install via apt for now
 #ARG JQ_VERSION="1.6"
-ARG HELM2_VERSION="v2.17.0"
 # https://github.com/helm/helm/releases (kept on v3.x; helmfile drives helm3, v4 is a breaking major)
 ARG HELM3_VERSION="v3.21.2"
 # https://github.com/helmfile/helmfile/releases
@@ -104,23 +105,68 @@ ARG KUBECTL_VERSION="v1.36.2"
 # https://github.com/kubernetes-sigs/krew/releases/
 ARG KREW_VERSION="v0.5.0"
 
+# Each binary is downloaded then verified against its publisher's SHA256 before
+# install. Most publish a checksum file we fetch at build time; age and yq do
+# not publish a usable one, so their per-arch hashes are pinned here directly
+# (update these two when bumping AGE_VERSION / YQ_VERSION).
 # wget -qO "/usr/local/bin/jq"       "https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64" && \
+WORKDIR /tmp
 RUN \
   GO_ARCH=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/') && \
-  wget -qO-                          "https://get.helm.sh/helm-${HELM2_VERSION}-linux-${GO_ARCH}.tar.gz" | tar zxv --strip-components=1 -C /tmp linux-${GO_ARCH}/helm && mv /tmp/helm /usr/local/bin/helm-v2 && \
-  wget -qO-                          "https://get.helm.sh/helm-${HELM3_VERSION}-linux-${GO_ARCH}.tar.gz" | tar zxv --strip-components=1 -C /tmp linux-${GO_ARCH}/helm && mv /tmp/helm /usr/local/bin/helm-v3 && \
-  wget -qO "/usr/local/bin/sops"     "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.${GO_ARCH}" && \
-  wget -qO-                          "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/age-${AGE_VERSION}-linux-${GO_ARCH}.tar.gz" | tar zxv --strip-components=1 -C /usr/local/bin age/age age/age-keygen && \
-  wget -qO  "/tmp/helmfile.tar.gz"   "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION}_linux_${GO_ARCH}.tar.gz" && \
-  wget -qO  "/tmp/helmfile_checksums.txt" "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION}_checksums.txt" && \
-  ( cd /tmp && grep "  helmfile_${HELMFILE_VERSION}_linux_${GO_ARCH}.tar.gz\$" helmfile_checksums.txt | sed 's#helmfile_'"${HELMFILE_VERSION}"'_linux_'"${GO_ARCH}"'.tar.gz#helmfile.tar.gz#' | sha256sum -c - ) && \
-  tar zxv -C /usr/local/bin -f /tmp/helmfile.tar.gz helmfile && \
-  rm -f /tmp/helmfile.tar.gz /tmp/helmfile_checksums.txt && \
-  wget -qO "/usr/local/bin/yq"       "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${GO_ARCH}" && \
-  wget -qO "/usr/local/bin/kubectl"  "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl" && \
-  wget -qO-                          "https://github.com/kubernetes-sigs/krew/releases/download/${KREW_VERSION}/krew-linux_${GO_ARCH}.tar.gz" | tar zxv -C /tmp ./krew-linux_${GO_ARCH} && mv /tmp/krew-linux_${GO_ARCH} /usr/local/bin/kubectl-krew && \
-  wget -qO-                          "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION}-linux-${GO_ARCH}.tar.gz" | tar zxv -C /usr/local/bin kubeseal && \
-  wget -qO-                          "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE5_VERSION}/kustomize_v${KUSTOMIZE5_VERSION}_linux_${GO_ARCH}.tar.gz" | tar zxv -C /usr/local/bin kustomize && \
+  # helm v3 -- upstream .sha256sum (full "<hash>  <file>" line)
+  HELM_TGZ="helm-${HELM3_VERSION}-linux-${GO_ARCH}.tar.gz" && \
+  wget -qO "${HELM_TGZ}" "https://get.helm.sh/${HELM_TGZ}" && \
+  wget -qO- "https://get.helm.sh/${HELM_TGZ}.sha256sum" | sha256sum -c - && \
+  tar zxf "${HELM_TGZ}" --strip-components=1 -C /tmp "linux-${GO_ARCH}/helm" && mv /tmp/helm /usr/local/bin/helm-v3 && \
+  # sops -- upstream checksums.txt (list)
+  SOPS_BIN="sops-${SOPS_VERSION}.linux.${GO_ARCH}" && \
+  wget -qO "${SOPS_BIN}" "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/${SOPS_BIN}" && \
+  wget -qO- "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.checksums.txt" | grep " ${SOPS_BIN}$" | sha256sum -c - && \
+  install -m 0755 "${SOPS_BIN}" /usr/local/bin/sops && \
+  # age -- no upstream checksum file; pinned per-arch hash
+  AGE_TGZ="age-${AGE_VERSION}-linux-${GO_ARCH}.tar.gz" && \
+  wget -qO "${AGE_TGZ}" "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/${AGE_TGZ}" && \
+  case "${GO_ARCH}" in \
+    amd64) AGE_SHA="bdc69c09cbdd6cf8b1f333d372a1f58247b3a33146406333e30c0f26e8f51377" ;; \
+    arm64) AGE_SHA="c6878a324421b69e3e20b00ba17c04bc5c6dab0030cfe55bf8f68fa8d9e9093a" ;; \
+    *) echo "no pinned age sha for ${GO_ARCH}" >&2; exit 1 ;; \
+  esac && \
+  echo "${AGE_SHA}  ${AGE_TGZ}" | sha256sum -c - && \
+  tar zxf "${AGE_TGZ}" --strip-components=1 -C /usr/local/bin age/age age/age-keygen && \
+  # helmfile -- upstream checksums.txt (list)
+  HELMFILE_TGZ="helmfile_${HELMFILE_VERSION}_linux_${GO_ARCH}.tar.gz" && \
+  wget -qO "${HELMFILE_TGZ}" "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/${HELMFILE_TGZ}" && \
+  wget -qO- "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION}_checksums.txt" | grep " ${HELMFILE_TGZ}$" | sha256sum -c - && \
+  tar zxf "${HELMFILE_TGZ}" -C /usr/local/bin helmfile && \
+  # yq -- upstream checksum format is awkward; pinned per-arch hash
+  wget -qO "yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${GO_ARCH}" && \
+  case "${GO_ARCH}" in \
+    amd64) YQ_SHA="fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4" ;; \
+    arm64) YQ_SHA="578648e463a11c1b6db6010cbf41eafed6bee79466fcffa1bb446672cf7945ea" ;; \
+    *) echo "no pinned yq sha for ${GO_ARCH}" >&2; exit 1 ;; \
+  esac && \
+  echo "${YQ_SHA}  yq" | sha256sum -c - && \
+  install -m 0755 "yq" /usr/local/bin/yq && \
+  # kubectl -- upstream .sha256 (hash only)
+  wget -qO "kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl" && \
+  echo "$(wget -qO- "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl.sha256" | tr -d '[:space:]')  kubectl" | sha256sum -c - && \
+  install -m 0755 "kubectl" /usr/local/bin/kubectl && \
+  # krew -- upstream .sha256 (hash only)
+  KREW_TGZ="krew-linux_${GO_ARCH}.tar.gz" && \
+  wget -qO "${KREW_TGZ}" "https://github.com/kubernetes-sigs/krew/releases/download/${KREW_VERSION}/${KREW_TGZ}" && \
+  echo "$(wget -qO- "https://github.com/kubernetes-sigs/krew/releases/download/${KREW_VERSION}/${KREW_TGZ}.sha256" | tr -d '[:space:]')  ${KREW_TGZ}" | sha256sum -c - && \
+  tar zxf "${KREW_TGZ}" "./krew-linux_${GO_ARCH}" && mv "./krew-linux_${GO_ARCH}" /usr/local/bin/kubectl-krew && \
+  # kubeseal -- upstream checksums.txt (list)
+  KUBESEAL_TGZ="kubeseal-${KUBESEAL_VERSION}-linux-${GO_ARCH}.tar.gz" && \
+  wget -qO "${KUBESEAL_TGZ}" "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/${KUBESEAL_TGZ}" && \
+  wget -qO- "https://github.com/bitnami-labs/sealed-secrets/releases/download/v${KUBESEAL_VERSION}/sealed-secrets_${KUBESEAL_VERSION}_checksums.txt" | grep " ${KUBESEAL_TGZ}$" | sha256sum -c - && \
+  tar zxf "${KUBESEAL_TGZ}" -C /usr/local/bin kubeseal && \
+  # kustomize -- upstream checksums.txt (list)
+  KUSTOMIZE_TGZ="kustomize_v${KUSTOMIZE5_VERSION}_linux_${GO_ARCH}.tar.gz" && \
+  wget -qO "${KUSTOMIZE_TGZ}" "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE5_VERSION}/${KUSTOMIZE_TGZ}" && \
+  wget -qO- "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE5_VERSION}/checksums.txt" | grep " ${KUSTOMIZE_TGZ}$" | sha256sum -c - && \
+  tar zxf "${KUSTOMIZE_TGZ}" -C /usr/local/bin kustomize && \
+  rm -f /tmp/helm-* /tmp/sops-* /tmp/age-* /tmp/helmfile_* /tmp/yq /tmp/kubectl /tmp/krew-* /tmp/kubeseal-* /tmp/kustomize_* && \
   true
 
 COPY src/*.sh /usr/local/bin/
