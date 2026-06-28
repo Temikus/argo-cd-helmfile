@@ -1,5 +1,5 @@
-![Image](https://img.shields.io/docker/pulls/travisghansen/argo-cd-helmfile.svg)
-![Image](https://img.shields.io/github/actions/workflow/status/travisghansen/argo-cd-helmfile/main.yml?branch=master&style=flat-square)
+![Build status](https://img.shields.io/github/actions/workflow/status/temikus/argo-cd-helmfile/main.yml?branch=master&style=flat-square)
+![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen?style=flat-square&logo=renovatebot)
 
 # Intro
 
@@ -48,7 +48,10 @@ repoServer:
 
   extraContainers:
   - name: helmfile-plugin
-    image: travisghansen/argo-cd-helmfile:latest
+    # Pin to an immutable tag/digest from ghcr.io/temikus/argo-cd-helmfile —
+    # this image publishes `sha-<commit>` tags (and git tags on releases),
+    # never `latest`. e.g. ghcr.io/temikus/argo-cd-helmfile:sha-<commit>
+    image: ghcr.io/temikus/argo-cd-helmfile:sha-<commit>
     command: [/var/run/argocd/argocd-cmp-server]
     env:
     ...
