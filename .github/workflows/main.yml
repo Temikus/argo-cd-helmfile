@@ -4,6 +4,16 @@
 #  - Every action is pinned to a commit SHA (the trailing `# vX.Y.Z` is just a human hint).
 #  - Published image tags are immutable: per-commit `sha-<full-sha>` and, on a release tag
 #    push, the git tag itself. No `:latest` / `:master` / branch tags are produced.
+#
+# PR build policy:
+#  - By default a PR runs only a fast, NATIVE-arch smoke build (no QEMU, no push) just to
+#    prove the Dockerfile still builds.
+#  - The full multi-arch build is opt-in per PR via the `build-all` label. It still
+#    does not push (PRs never publish); it only exercises the cross-arch build.
+#  - Labels are maintainer-gated by GitHub itself: applying a label needs Triage permission
+#    or higher, so a fork contributor cannot self-enable it. And because this uses
+#    `pull_request` (not `pull_request_target`), fork PRs run with a read-only token and no
+#    secrets, so the multi-arch path cannot push even when labeled.
 
 name: CI
 
@@ -17,6 +27,9 @@ on:
   pull_request:
     branches:
       - master
+    # `labeled`/`unlabeled` so toggling `build-all` on an open PR triggers a fresh run
+    # (adding the label switches to the full multi-arch build; removing it reverts to smoke).
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -26,7 +39,37 @@ env:
   IMAGE: ghcr.io/temikus/argo-cd-helmfile
 
 jobs:
+  # Fast feedback on PRs that have NOT opted into a full build: build for the runner's
+  # native architecture only. No QEMU setup, no emulation overhead, no push.
+  smoke:
+    if: >-
+      github.event_name == 'pull_request' &&
+      !contains(github.event.pull_request.labels.*.name, 'build-all')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Smoke build (native arch, no push)
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          # No `platforms:` -> buildx targets the runner's native arch only (no QEMU).
+          # No `pull:` -> runners are ephemeral (nothing cached between runs), so the base
+          # image is fetched fresh regardless; forcing `--pull` would just be redundant here.
+          push: false
+          tags: ${{ env.IMAGE }}:pr-smoke
+
+  # Full multi-arch build. Runs on push/tag (and pushes to GHCR), or on a PR that carries
+  # the `build-all` label (builds cross-arch but does NOT push).
   build:
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'build-all')
     runs-on: ubuntu-latest
 
     steps:
