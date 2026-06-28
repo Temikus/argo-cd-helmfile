@@ -107,8 +107,9 @@ ARG KREW_VERSION="v0.5.0"
 
 # Each binary is downloaded then verified against its publisher's SHA256 before
 # install. Most publish a checksum file we fetch at build time; age and yq do
-# not publish a usable one, so their per-arch hashes are pinned here directly
-# (update these two when bumping AGE_VERSION / YQ_VERSION).
+# not publish a usable one, so their per-arch hashes are pinned here directly.
+# When bumping AGE_VERSION / YQ_VERSION, regenerate these with
+# `just update-checksums` and paste the printed values into the case blocks.
 # wget -qO "/usr/local/bin/jq"       "https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64" && \
 WORKDIR /tmp
 RUN \
@@ -194,18 +195,35 @@ ENV HELM_DATA_HOME=/home/argocd/helm/data
 ENV KREW_ROOT=/home/argocd/krew
 ENV PATH="${KREW_ROOT}/bin:$PATH"
 
-# plugin versions
+# plugin versions. Each *_SHA is the commit its tag points to; the build clones
+# the tag and aborts if the tag has been moved off that commit (tags are
+# mutable, commits are not). Regenerate with `just update-plugin-shas` when
+# bumping a version. (helm-diff additionally pulls a prebuilt binary in its own
+# install hook, which remains version-pinned and upstream-controlled.)
 # https://github.com/databus23/helm-diff/releases
 ARG HELM_DIFF_VERSION="3.15.10"
+ARG HELM_DIFF_SHA="5873f8d94712f014dc2bb329acae63b8ffbf569b"
 # https://github.com/aslafy-z/helm-git/releases
 ARG HELM_GIT_VERSION="1.5.2"
+ARG HELM_GIT_SHA="8f910e377bf743cc07ce963a696b1e7929aebb80"
 # https://github.com/jkroepke/helm-secrets/releases
 ARG HELM_SECRETS_VERSION="4.7.7"
+ARG HELM_SECRETS_SHA="f02f8df1c57af3c65f531bb0e0bc0859a8540845"
 
 RUN \
-  helm-v3 plugin install https://github.com/databus23/helm-diff   --version ${HELM_DIFF_VERSION} && \
-  helm-v3 plugin install https://github.com/aslafy-z/helm-git     --version ${HELM_GIT_VERSION} && \
-  helm-v3 plugin install https://github.com/jkroepke/helm-secrets --version ${HELM_SECRETS_VERSION} && \
+  install_helm_plugin() { \
+    local repo="$1" ref="$2" want="$3" dir got rc; \
+    dir="$(mktemp -d)"; \
+    git clone --depth 1 --branch "${ref}" "${repo}" "${dir}" || return 1; \
+    got="$(git -C "${dir}" rev-parse HEAD)"; \
+    if [ "${got}" != "${want}" ]; then \
+      echo "ERROR: ${repo} ${ref} resolved to ${got}, expected ${want}" >&2; rm -rf "${dir}"; return 1; \
+    fi; \
+    helm-v3 plugin install "${dir}"; rc=$?; rm -rf "${dir}"; return ${rc}; \
+  } && \
+  install_helm_plugin https://github.com/databus23/helm-diff   "v${HELM_DIFF_VERSION}"    "${HELM_DIFF_SHA}" && \
+  install_helm_plugin https://github.com/aslafy-z/helm-git     "v${HELM_GIT_VERSION}"     "${HELM_GIT_SHA}" && \
+  install_helm_plugin https://github.com/jkroepke/helm-secrets "v${HELM_SECRETS_VERSION}" "${HELM_SECRETS_SHA}" && \
   kubectl krew update && \
   mkdir -p ${KREW_ROOT}/bin && \
   true
