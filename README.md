@@ -48,7 +48,10 @@ repoServer:
 
   extraContainers:
   - name: helmfile-plugin
-    image: travisghansen/argo-cd-helmfile:latest
+    # Pin to an immutable tag/digest from ghcr.io/temikus/argo-cd-helmfile —
+    # this image publishes `sha-<commit>` tags (and git tags on releases),
+    # never `latest`. e.g. ghcr.io/temikus/argo-cd-helmfile:sha-<commit>
+    image: ghcr.io/temikus/argo-cd-helmfile:sha-<commit>
     command: [/var/run/argocd/argocd-cmp-server]
     env:
     ...
