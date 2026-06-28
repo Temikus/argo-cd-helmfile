@@ -23,9 +23,10 @@ build-multiarch tag=image:
 lint:
     docker run --rm -i hadolint/hadolint hadolint - < Dockerfile
 
-# Validate renovate.json (pin @latest to match the rolling Mend app; --strict)
+# Validate renovate.json. Pinned (not @latest) so a Renovate release that drops
+# support for the local Node version can't silently break this; bump as needed.
 renovate-validate:
-    npx --yes --package renovate@latest -- renovate-config-validator --strict renovate.json
+    npx --yes --package renovate@43.245.0 -- renovate-config-validator --strict renovate.json
 
 # Smoke-test the built image: print the version of each bundled tool
 validate tag=image:

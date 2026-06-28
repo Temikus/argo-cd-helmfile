@@ -3,8 +3,10 @@
   "extends": [
     "config:recommended",
     ":dependencyDashboard",
-    ":semanticCommits"
+    ":semanticCommits",
+    "schedule:nonOfficeHours"
   ],
+  "timezone": "Australia/Sydney",
   "labels": [
     "dependencies"
   ],
