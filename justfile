@@ -19,9 +19,17 @@ build tag=image:
 build-multiarch tag=image:
     docker buildx build --platform {{platform}} -t {{tag}} .
 
+# Lint everything (Dockerfile + GitHub Actions workflows)
+lint: lint-dockerfile lint-actions
+
 # Lint the Dockerfile with hadolint
-lint:
+lint-dockerfile:
     docker run --rm -i hadolint/hadolint hadolint - < Dockerfile
+
+# Lint GitHub Actions workflows with actionlint. Pinned by digest (the `:1.7.12` tag is
+# just a human hint), consistent with the repo's "always pin, never floating" policy.
+lint-actions:
+    docker run --rm -v "{{justfile_directory()}}:/repo" --workdir /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color
 
 # Validate renovate.json. Pinned (not @latest) so a Renovate release that drops
 # support for the local Node version can't silently break this; bump as needed.
