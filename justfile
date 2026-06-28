@@ -69,3 +69,34 @@ update-plugin-shas:
     resolve databus23/helm-diff   "v$(ver HELM_DIFF_VERSION)"    HELM_DIFF_SHA
     resolve aslafy-z/helm-git      "v$(ver HELM_GIT_VERSION)"     HELM_GIT_SHA
     resolve jkroepke/helm-secrets  "v$(ver HELM_SECRETS_VERSION)" HELM_SECRETS_SHA
+
+# Reads the latest vX.Y.Z tag, bumps the chosen segment, creates an annotated tag,
+# and pushes it to origin. The tag push triggers CI (build+publish to GHCR) and the
+# Release workflow (GitHub Release). Run only on a clean tree you intend to ship.
+# Tag and push a release: just release [patch|minor|major] (default: patch)
+release bump="patch":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -n "$(git status --porcelain)" ]; then
+      echo "Working tree is dirty; commit or stash before releasing." >&2
+      exit 1
+    fi
+    git fetch --tags origin
+    latest=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+    [ -z "$latest" ] && latest="v0.0.0"
+    IFS='.' read -r major minor patch <<< "${latest#v}"
+    case "{{bump}}" in
+      major) major=$((major + 1)); minor=0; patch=0 ;;
+      minor) minor=$((minor + 1)); patch=0 ;;
+      patch) patch=$((patch + 1)) ;;
+      *) echo "Usage: just release [patch|minor|major]" >&2; exit 1 ;;
+    esac
+    new_tag="v${major}.${minor}.${patch}"
+    if git rev-parse -q --verify "refs/tags/${new_tag}" >/dev/null; then
+      echo "Tag ${new_tag} already exists." >&2
+      exit 1
+    fi
+    echo "Tagging ${new_tag} (previous: ${latest})"
+    git tag -a "${new_tag}" -m "Release ${new_tag}"
+    git push origin "${new_tag}"
+    echo "Released ${new_tag} -> https://github.com/Temikus/argo-cd-helmfile/releases/tag/${new_tag}"

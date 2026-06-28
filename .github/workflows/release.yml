@@ -1,0 +1,48 @@
+# Creates a GitHub Release when a vX.Y.Z tag is pushed (typically by `just release`).
+#
+# The container image itself is built and published to GHCR by the CI workflow
+# (.github/workflows/main.yml), which also runs on `v*` tag pushes. This workflow
+# is purely the GitHub Release entry: auto-generated notes plus a pointer to the
+# immutable, published image tag.
+#
+# Policy: every action is pinned to a commit SHA (the trailing `# vX.Y.Z` is a
+# human hint only).
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # required to create the GitHub Release
+
+env:
+  IMAGE: ghcr.io/temikus/argo-cd-helmfile
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
+        with:
+          generate_release_notes: true
+          body: |
+            ## Container image
+
+            Pinned, multi-arch (linux/amd64, linux/arm64) image published to GHCR by CI:
+
+            ```
+            ${{ env.IMAGE }}:${{ github.ref_name }}
+            ```
+
+            Pull by immutable tag:
+
+            ```sh
+            docker pull ${{ env.IMAGE }}:${{ github.ref_name }}
+            ```
