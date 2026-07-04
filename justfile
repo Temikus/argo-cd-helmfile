@@ -74,9 +74,11 @@ update-plugin-shas:
       sha="$(curl -fsSL "https://api.github.com/repos/$1/commits/$2" | sed -nE 's/^[[:space:]]*"sha":[[:space:]]*"([0-9a-f]{40})".*/\1/p' | head -1)"
       printf 'ARG %s="%s"\n' "$3" "$sha"
     }
-    resolve databus23/helm-diff   "v$(ver HELM_DIFF_VERSION)"    HELM_DIFF_SHA
-    resolve aslafy-z/helm-git      "v$(ver HELM_GIT_VERSION)"     HELM_GIT_SHA
-    resolve jkroepke/helm-secrets  "v$(ver HELM_SECRETS_VERSION)" HELM_SECRETS_SHA
+    # *_VERSION already carries the upstream `v` prefix (see Dockerfile note), so
+    # pass it through verbatim — no extra `v` here.
+    resolve databus23/helm-diff   "$(ver HELM_DIFF_VERSION)"    HELM_DIFF_SHA
+    resolve aslafy-z/helm-git      "$(ver HELM_GIT_VERSION)"     HELM_GIT_SHA
+    resolve jkroepke/helm-secrets  "$(ver HELM_SECRETS_VERSION)" HELM_SECRETS_SHA
 
 # Reads the latest vX.Y.Z tag, bumps the chosen segment, creates an annotated tag,
 # and pushes it to origin. The tag push triggers CI (build+publish to GHCR) and the

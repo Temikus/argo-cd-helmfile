@@ -226,17 +226,22 @@ ENV PATH="${KREW_ROOT}/bin:$PATH"
 # mutable, commits are not). Regenerate with `just update-plugin-shas` when
 # bumping a version. (helm-diff additionally pulls a prebuilt binary in its own
 # install hook, which remains version-pinned and upstream-controlled.)
+#
+# The version value MUST match the upstream git tag verbatim, including the `v`
+# prefix: Renovate's github-tags digest lookup resolves the tag literally, so a
+# bare "3.15.10" fails ("could not determine new digest") and the paired *_SHA
+# never gets auto-refreshed. Keep the `v` here and clone "${..._VERSION}" as-is.
 # https://github.com/databus23/helm-diff/releases
 # renovate: datasource=github-tags depName=databus23/helm-diff
-ARG HELM_DIFF_VERSION="3.15.10"
+ARG HELM_DIFF_VERSION="v3.15.10"
 ARG HELM_DIFF_SHA="5873f8d94712f014dc2bb329acae63b8ffbf569b"
 # https://github.com/aslafy-z/helm-git/releases
 # renovate: datasource=github-tags depName=aslafy-z/helm-git
-ARG HELM_GIT_VERSION="1.5.2"
+ARG HELM_GIT_VERSION="v1.5.2"
 ARG HELM_GIT_SHA="8f910e377bf743cc07ce963a696b1e7929aebb80"
 # https://github.com/jkroepke/helm-secrets/releases
 # renovate: datasource=github-tags depName=jkroepke/helm-secrets
-ARG HELM_SECRETS_VERSION="4.7.7"
+ARG HELM_SECRETS_VERSION="v4.7.7"
 ARG HELM_SECRETS_SHA="f02f8df1c57af3c65f531bb0e0bc0859a8540845"
 
 RUN \
@@ -250,9 +255,9 @@ RUN \
     fi; \
     helm-v3 plugin install "${dir}"; rc=$?; rm -rf "${dir}"; return ${rc}; \
   } && \
-  install_helm_plugin https://github.com/databus23/helm-diff   "v${HELM_DIFF_VERSION}"    "${HELM_DIFF_SHA}" && \
-  install_helm_plugin https://github.com/aslafy-z/helm-git     "v${HELM_GIT_VERSION}"     "${HELM_GIT_SHA}" && \
-  install_helm_plugin https://github.com/jkroepke/helm-secrets "v${HELM_SECRETS_VERSION}" "${HELM_SECRETS_SHA}" && \
+  install_helm_plugin https://github.com/databus23/helm-diff   "${HELM_DIFF_VERSION}"    "${HELM_DIFF_SHA}" && \
+  install_helm_plugin https://github.com/aslafy-z/helm-git     "${HELM_GIT_VERSION}"     "${HELM_GIT_SHA}" && \
+  install_helm_plugin https://github.com/jkroepke/helm-secrets "${HELM_SECRETS_VERSION}" "${HELM_SECRETS_SHA}" && \
   kubectl krew update && \
   mkdir -p ${KREW_ROOT}/bin && \
   true
