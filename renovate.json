@@ -7,6 +7,7 @@
     "schedule:nonOfficeHours"
   ],
   "timezone": "Australia/Sydney",
+  "forkProcessing": "enabled",
   "labels": [
     "dependencies"
   ],
