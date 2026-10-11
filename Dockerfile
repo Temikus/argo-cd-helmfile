@@ -102,7 +102,7 @@ RUN groupadd -g $ARGOCD_USER_ID argocd && \
 # renovate.json); they must sit immediately above their ARG.
 # https://github.com/FiloSottile/age/releases
 # renovate: datasource=github-releases depName=FiloSottile/age
-ARG AGE_VERSION="v1.3.1"
+ARG AGE_VERSION="v1.3.2"
 # install via apt for now
 #ARG JQ_VERSION="1.6"
 # https://github.com/helm/helm/releases (kept on v3.x; helmfile drives helm3, v4 is a breaking major)
