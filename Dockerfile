@@ -154,8 +154,8 @@ RUN \
   AGE_TGZ="age-${AGE_VERSION}-linux-${GO_ARCH}.tar.gz" && \
   wget -qO "${AGE_TGZ}" "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/${AGE_TGZ}" && \
   case "${GO_ARCH}" in \
-    amd64) AGE_SHA="bdc69c09cbdd6cf8b1f333d372a1f58247b3a33146406333e30c0f26e8f51377" ;; \
-    arm64) AGE_SHA="c6878a324421b69e3e20b00ba17c04bc5c6dab0030cfe55bf8f68fa8d9e9093a" ;; \
+    amd64) AGE_SHA="cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10" ;; \
+    arm64) AGE_SHA="6b8dc4333c53a5a57c9e5834e3a48f92605d7154014cd07269ff3327db5d37f4" ;; \
     *) echo "no pinned age sha for ${GO_ARCH}" >&2; exit 1 ;; \
   esac && \
   echo "${AGE_SHA}  ${AGE_TGZ}" | sha256sum -c - && \
