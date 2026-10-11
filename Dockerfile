@@ -116,7 +116,7 @@ ARG HELMFILE_VERSION="1.6.0"
 ARG KUSTOMIZE5_VERSION="5.8.1"
 # https://github.com/getsops/sops/releases
 # renovate: datasource=github-releases depName=getsops/sops
-ARG SOPS_VERSION="v3.13.1"
+ARG SOPS_VERSION="v3.13.3"
 # https://github.com/mikefarah/yq/releases
 # renovate: datasource=github-releases depName=mikefarah/yq
 ARG YQ_VERSION="v4.53.3"
