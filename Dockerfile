@@ -233,16 +233,16 @@ ENV PATH="${KREW_ROOT}/bin:$PATH"
 # never gets auto-refreshed. Keep the `v` here and clone "${..._VERSION}" as-is.
 # https://github.com/databus23/helm-diff/releases
 # renovate: datasource=github-tags depName=databus23/helm-diff
-ARG HELM_DIFF_VERSION="v3.15.10"
-ARG HELM_DIFF_SHA="5873f8d94712f014dc2bb329acae63b8ffbf569b"
+ARG HELM_DIFF_VERSION="v3.15.15"
+ARG HELM_DIFF_SHA="63945947a87e026f2f0a985319fe29b781ae0a35"
 # https://github.com/aslafy-z/helm-git/releases
 # renovate: datasource=github-tags depName=aslafy-z/helm-git
 ARG HELM_GIT_VERSION="v1.5.2"
 ARG HELM_GIT_SHA="8f910e377bf743cc07ce963a696b1e7929aebb80"
 # https://github.com/jkroepke/helm-secrets/releases
 # renovate: datasource=github-tags depName=jkroepke/helm-secrets
-ARG HELM_SECRETS_VERSION="v4.7.7"
-ARG HELM_SECRETS_SHA="f02f8df1c57af3c65f531bb0e0bc0859a8540845"
+ARG HELM_SECRETS_VERSION="v4.7.9"
+ARG HELM_SECRETS_SHA="43597f7edf454c177059942133c4dd4b1afbe0a3"
 
 RUN \
   install_helm_plugin() { \
