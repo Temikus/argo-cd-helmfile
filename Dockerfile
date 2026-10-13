@@ -107,7 +107,7 @@ ARG AGE_VERSION="v1.3.2"
 #ARG JQ_VERSION="1.6"
 # https://github.com/helm/helm/releases (kept on v3.x; helmfile drives helm3, v4 is a breaking major)
 # renovate: datasource=github-releases depName=helm/helm
-ARG HELM3_VERSION="v3.21.2"
+ARG HELM3_VERSION="v3.22.0"
 # https://github.com/helmfile/helmfile/releases
 # renovate: datasource=github-releases depName=helmfile/helmfile
 ARG HELMFILE_VERSION="1.6.0"
