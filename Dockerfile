@@ -126,7 +126,7 @@ ARG YQ_VERSION="v4.53.3"
 ARG KUBESEAL_VERSION="0.40.0"
 # curl -v -L 'https://dl.k8s.io/release/stable.txt'
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-ARG KUBECTL_VERSION="v1.36.2"
+ARG KUBECTL_VERSION="v1.37.1"
 # https://github.com/kubernetes-sigs/krew/releases/
 # renovate: datasource=github-releases depName=kubernetes-sigs/krew
 ARG KREW_VERSION="v0.5.0"
