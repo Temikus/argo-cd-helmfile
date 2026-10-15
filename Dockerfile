@@ -4,7 +4,7 @@
 # docker run --rm -ti             --entrypoint bash foobar
 # docker run --rm -ti --user root --entrypoint bash foobar
 
-ARG BASE_IMAGE=docker.io/library/ubuntu:24.04@sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54
+ARG BASE_IMAGE=docker.io/library/ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
 
 FROM $BASE_IMAGE
 
