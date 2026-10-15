@@ -119,7 +119,7 @@ ARG KUSTOMIZE5_VERSION="5.8.3"
 ARG SOPS_VERSION="v3.13.3"
 # https://github.com/mikefarah/yq/releases
 # renovate: datasource=github-releases depName=mikefarah/yq
-ARG YQ_VERSION="v4.53.3"
+ARG YQ_VERSION="v4.54.1"
 
 # relevant for kubectl if installed
 # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
