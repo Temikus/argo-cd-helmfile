@@ -132,10 +132,10 @@ ARG KUBECTL_VERSION="v1.37.1"
 ARG KREW_VERSION="v0.5.0"
 
 # Each binary is downloaded then verified against its publisher's SHA256 before
-# install. Most publish a checksum file we fetch at build time; age and yq do
-# not publish a usable one, so their per-arch hashes are pinned here directly.
-# When bumping AGE_VERSION / YQ_VERSION, regenerate these with
-# `just update-checksums` and paste the printed values into the case blocks.
+# install. Most publish a checksum file we fetch at build time; age does not,
+# so its per-arch hashes are pinned here directly. When bumping AGE_VERSION,
+# regenerate them with `just update-checksums` and paste the printed values
+# into the case block.
 # wget -qO "/usr/local/bin/jq"       "https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64" && \
 WORKDIR /tmp
 RUN \
@@ -165,15 +165,11 @@ RUN \
   wget -qO "${HELMFILE_TGZ}" "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/${HELMFILE_TGZ}" && \
   wget -qO- "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION}_checksums.txt" | grep " ${HELMFILE_TGZ}$" | sha256sum -c - && \
   tar zxf "${HELMFILE_TGZ}" -C /usr/local/bin helmfile && \
-  # yq -- upstream checksum format is awkward; pinned per-arch hash
-  wget -qO "yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${GO_ARCH}" && \
-  case "${GO_ARCH}" in \
-    amd64) YQ_SHA="fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4" ;; \
-    arm64) YQ_SHA="578648e463a11c1b6db6010cbf41eafed6bee79466fcffa1bb446672cf7945ea" ;; \
-    *) echo "no pinned yq sha for ${GO_ARCH}" >&2; exit 1 ;; \
-  esac && \
-  echo "${YQ_SHA}  yq" | sha256sum -c - && \
-  install -m 0755 "yq" /usr/local/bin/yq && \
+  # yq -- upstream checksums-bsd ("SHA256 (<file>) = <hash>", read natively by sha256sum -c)
+  YQ_BIN="yq_linux_${GO_ARCH}" && \
+  wget -qO "${YQ_BIN}" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BIN}" && \
+  wget -qO- "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/checksums-bsd" | grep -F "SHA256 (${YQ_BIN}) = " | sha256sum -c - && \
+  install -m 0755 "${YQ_BIN}" /usr/local/bin/yq && \
   # kubectl -- upstream .sha256 (hash only)
   wget -qO "kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl" && \
   echo "$(wget -qO- "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl.sha256" | tr -d '[:space:]')  kubectl" | sha256sum -c - && \
@@ -193,7 +189,7 @@ RUN \
   wget -qO "${KUSTOMIZE_TGZ}" "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE5_VERSION}/${KUSTOMIZE_TGZ}" && \
   wget -qO- "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE5_VERSION}/checksums.txt" | grep " ${KUSTOMIZE_TGZ}$" | sha256sum -c - && \
   tar zxf "${KUSTOMIZE_TGZ}" -C /usr/local/bin kustomize && \
-  rm -f /tmp/helm-* /tmp/sops-* /tmp/age-* /tmp/helmfile_* /tmp/yq /tmp/kubectl /tmp/krew-* /tmp/kubeseal-* /tmp/kustomize_* && \
+  rm -f /tmp/helm-* /tmp/sops-* /tmp/age-* /tmp/helmfile_* /tmp/yq_* /tmp/kubectl /tmp/krew-* /tmp/kubeseal-* /tmp/kustomize_* && \
   true
 
 COPY src/*.sh /usr/local/bin/

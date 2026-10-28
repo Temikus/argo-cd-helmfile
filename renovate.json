@@ -58,10 +58,9 @@
       "groupName": "helm plugins"
     },
     {
-      "description": "age and yq carry pinned per-arch sha256 hashes that Renovate cannot regenerate; flag so the merger runs `just update-checksums`",
+      "description": "age carries pinned per-arch sha256 hashes that Renovate cannot regenerate; flag so the merger runs `just update-checksums`",
       "matchDepNames": [
-        "FiloSottile/age",
-        "mikefarah/yq"
+        "FiloSottile/age"
       ],
       "addLabels": [
         "needs-just-checksums"
