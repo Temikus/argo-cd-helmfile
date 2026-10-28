@@ -123,7 +123,7 @@ ARG YQ_VERSION="v4.53.3"
 
 # relevant for kubectl if installed
 # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
-ARG KUBESEAL_VERSION="0.40.0"
+ARG KUBESEAL_VERSION="0.41.1"
 # curl -v -L 'https://dl.k8s.io/release/stable.txt'
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
 ARG KUBECTL_VERSION="v1.37.1"
