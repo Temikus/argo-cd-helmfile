@@ -46,9 +46,10 @@ Images are published to `ghcr.io/temikus/argo-cd-helmfile` by the CI workflow.
   `master`, or branch tag — always pin to a `sha-<commit>` or release tag.
 - **Provenance + SBOM**: build attestations are attached to every push.
 - **Supply chain**: every bundled binary is verified against its publisher's
-  SHA256 before install (upstream checksum file, or a pinned per-arch hash where
-  upstream publishes none); helm plugins are cloned at a tag and the build aborts
-  if that tag no longer points at the pinned commit.
+  SHA256 before install (upstream checksum file, or a per-arch hash pinned in
+  the `Dockerfile` that Renovate re-hashes on each bump); helm plugins are
+  cloned at a tag and the build aborts if that tag no longer points at the
+  pinned commit.
 
 Bundled tooling (versions are pinned in the `Dockerfile` and bumped by Renovate):
 
@@ -261,8 +262,8 @@ Common tasks are automated with [`just`](https://github.com/casey/just). Run
 - `just lint` — lint the `Dockerfile` with hadolint
 - `just validate [tag]` — smoke-test a built image (prints each bundled tool's version)
 - `just renovate-validate` — validate `renovate.json` against the Renovate schema
-- `just update-checksums` — recompute the pinned per-arch SHA256 for `age` and `yq`
-  (run after bumping `AGE_VERSION` / `YQ_VERSION`)
+- `just update-checksums` — print the pinned per-arch SHA256 for `age` and `yq`
+  (Renovate updates them; use this to check its values)
 - `just update-plugin-shas` — resolve each helm-plugin tag to the commit SHA pinned
   in the `Dockerfile`
 

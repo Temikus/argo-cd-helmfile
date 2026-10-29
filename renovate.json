@@ -38,6 +38,17 @@
         "# renovate: datasource=(?<datasource>github-tags) depName=(?<depName>\\S+)\\s*\\nARG \\w+_VERSION=\"(?<currentValue>[^\"]+)\"\\s*\\nARG \\w+_SHA=\"(?<currentDigest>[0-9a-f]+)\""
       ],
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Pinned per-arch SHA256 of a release asset (age, yq). github-release-attachments finds the asset the current hash belongs to and hashes the same asset in the new release. Each pin carries its own digestVersion so no two deps edit the same line; the shared depName puts them in the version bump's branch.",
+      "managerFilePatterns": [
+        "/(^|/)Dockerfile$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>github-release-attachments) depName=(?<depName>\\S+) digestVersion=(?<currentValue>\\S+)\\s*\\nARG \\w+_SHA256_\\w+=\"(?<currentDigest>[0-9a-f]{64})\""
+      ],
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
@@ -56,19 +67,6 @@
         "jkroepke/helm-secrets"
       ],
       "groupName": "helm plugins"
-    },
-    {
-      "description": "age and yq carry pinned per-arch sha256 hashes that Renovate cannot regenerate; flag so the merger runs `just update-checksums`",
-      "matchDepNames": [
-        "FiloSottile/age",
-        "mikefarah/yq"
-      ],
-      "addLabels": [
-        "needs-just-checksums"
-      ],
-      "prBodyNotes": [
-        ":warning: This bumps a tool whose per-arch SHA256 is pinned in the Dockerfile. Before merging, run `just update-checksums`, paste the printed values into the `case` blocks, and push to this branch \u2014 otherwise the image build will fail the checksum verification."
-      ]
     }
   ]
 }
