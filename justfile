@@ -47,17 +47,23 @@ validate tag=image:
     docker run --rm --entrypoint helm-v3 {{tag}} version --short
     docker run --rm --entrypoint kubectl {{tag}} version --client=true 2>/dev/null | head -1
 
-# Recompute the pinned per-arch SHA256 for age (no upstream checksum file)
+# Print the pinned per-arch SHA256 ARGs for age and yq. Renovate keeps them
+# current; use this to check its values or to pin by hand.
 update-checksums:
     #!/usr/bin/env bash
     set -euo pipefail
     ver() { sed -nE "s/^ARG $1=\"([^\"]+)\".*/\1/p" Dockerfile; }
     sha() { {{_sha256}} | awk '{print $1}'; }
-    age_ver="$(ver AGE_VERSION)"
+    age_ver="$(ver AGE_VERSION)"; yq_ver="$(ver YQ_VERSION)"
     echo "# age ${age_ver}"
     for a in amd64 arm64; do
       h="$(curl -fsSL "https://github.com/FiloSottile/age/releases/download/${age_ver}/age-${age_ver}-linux-${a}.tar.gz" | sha)"
-      printf '    %-6s) AGE_SHA="%s" ;;\n' "$a" "$h"
+      printf 'ARG AGE_SHA256_%s="%s"\n' "$(echo "$a" | tr a-z A-Z)" "$h"
+    done
+    echo "# yq ${yq_ver}"
+    for a in amd64 arm64; do
+      h="$(curl -fsSL "https://github.com/mikefarah/yq/releases/download/${yq_ver}/yq_linux_${a}" | sha)"
+      printf 'ARG YQ_SHA256_%s="%s"\n' "$(echo "$a" | tr a-z A-Z)" "$h"
     done
 
 # Resolve each helm-plugin tag to the commit SHA to pin in the Dockerfile

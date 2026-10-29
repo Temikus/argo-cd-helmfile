@@ -103,6 +103,10 @@ RUN groupadd -g $ARGOCD_USER_ID argocd && \
 # https://github.com/FiloSottile/age/releases
 # renovate: datasource=github-releases depName=FiloSottile/age
 ARG AGE_VERSION="v1.3.2"
+# renovate: datasource=github-release-attachments depName=FiloSottile/age digestVersion=v1.3.2
+ARG AGE_SHA256_AMD64="cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10"
+# renovate: datasource=github-release-attachments depName=FiloSottile/age digestVersion=v1.3.2
+ARG AGE_SHA256_ARM64="6b8dc4333c53a5a57c9e5834e3a48f92605d7154014cd07269ff3327db5d37f4"
 # install via apt for now
 #ARG JQ_VERSION="1.6"
 # https://github.com/helm/helm/releases (kept on v3.x; helmfile drives helm3, v4 is a breaking major)
@@ -120,6 +124,10 @@ ARG SOPS_VERSION="v3.13.3"
 # https://github.com/mikefarah/yq/releases
 # renovate: datasource=github-releases depName=mikefarah/yq
 ARG YQ_VERSION="v4.54.1"
+# renovate: datasource=github-release-attachments depName=mikefarah/yq digestVersion=v4.54.1
+ARG YQ_SHA256_AMD64="8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f"
+# renovate: datasource=github-release-attachments depName=mikefarah/yq digestVersion=v4.54.1
+ARG YQ_SHA256_ARM64="189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d57a71b"
 
 # relevant for kubectl if installed
 # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
@@ -132,10 +140,9 @@ ARG KUBECTL_VERSION="v1.37.1"
 ARG KREW_VERSION="v0.5.0"
 
 # Each binary is downloaded then verified against its publisher's SHA256 before
-# install. Most publish a checksum file we fetch at build time; age does not,
-# so its per-arch hashes are pinned here directly. When bumping AGE_VERSION,
-# regenerate them with `just update-checksums` and paste the printed values
-# into the case block.
+# install. Most publish a checksum file we fetch at build time. age and yq are
+# pinned to per-arch hashes in the AGE_/YQ_SHA256_* ARGs instead, so a swapped
+# release asset fails the build. Renovate re-hashes them on each version bump.
 # wget -qO "/usr/local/bin/jq"       "https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64" && \
 WORKDIR /tmp
 RUN \
@@ -150,12 +157,12 @@ RUN \
   wget -qO "${SOPS_BIN}" "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/${SOPS_BIN}" && \
   wget -qO- "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.checksums.txt" | grep " ${SOPS_BIN}$" | sha256sum -c - && \
   install -m 0755 "${SOPS_BIN}" /usr/local/bin/sops && \
-  # age -- no upstream checksum file; pinned per-arch hash
+  # age -- no upstream checksum file; pinned per-arch hash (AGE_SHA256_*)
   AGE_TGZ="age-${AGE_VERSION}-linux-${GO_ARCH}.tar.gz" && \
   wget -qO "${AGE_TGZ}" "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/${AGE_TGZ}" && \
   case "${GO_ARCH}" in \
-    amd64) AGE_SHA="cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10" ;; \
-    arm64) AGE_SHA="6b8dc4333c53a5a57c9e5834e3a48f92605d7154014cd07269ff3327db5d37f4" ;; \
+    amd64) AGE_SHA="${AGE_SHA256_AMD64}" ;; \
+    arm64) AGE_SHA="${AGE_SHA256_ARM64}" ;; \
     *) echo "no pinned age sha for ${GO_ARCH}" >&2; exit 1 ;; \
   esac && \
   echo "${AGE_SHA}  ${AGE_TGZ}" | sha256sum -c - && \
@@ -165,11 +172,15 @@ RUN \
   wget -qO "${HELMFILE_TGZ}" "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/${HELMFILE_TGZ}" && \
   wget -qO- "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION}_checksums.txt" | grep " ${HELMFILE_TGZ}$" | sha256sum -c - && \
   tar zxf "${HELMFILE_TGZ}" -C /usr/local/bin helmfile && \
-  # yq -- upstream checksums-bsd ("SHA256 (<file>) = <hash>", read natively by sha256sum -c)
-  YQ_BIN="yq_linux_${GO_ARCH}" && \
-  wget -qO "${YQ_BIN}" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BIN}" && \
-  wget -qO- "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/checksums-bsd" | grep -F "SHA256 (${YQ_BIN}) = " | sha256sum -c - && \
-  install -m 0755 "${YQ_BIN}" /usr/local/bin/yq && \
+  # yq -- pinned per-arch hash (YQ_SHA256_*)
+  wget -qO "yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${GO_ARCH}" && \
+  case "${GO_ARCH}" in \
+    amd64) YQ_SHA="${YQ_SHA256_AMD64}" ;; \
+    arm64) YQ_SHA="${YQ_SHA256_ARM64}" ;; \
+    *) echo "no pinned yq sha for ${GO_ARCH}" >&2; exit 1 ;; \
+  esac && \
+  echo "${YQ_SHA}  yq" | sha256sum -c - && \
+  install -m 0755 "yq" /usr/local/bin/yq && \
   # kubectl -- upstream .sha256 (hash only)
   wget -qO "kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl" && \
   echo "$(wget -qO- "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${GO_ARCH}/kubectl.sha256" | tr -d '[:space:]')  kubectl" | sha256sum -c - && \
@@ -189,7 +200,7 @@ RUN \
   wget -qO "${KUSTOMIZE_TGZ}" "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE5_VERSION}/${KUSTOMIZE_TGZ}" && \
   wget -qO- "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE5_VERSION}/checksums.txt" | grep " ${KUSTOMIZE_TGZ}$" | sha256sum -c - && \
   tar zxf "${KUSTOMIZE_TGZ}" -C /usr/local/bin kustomize && \
-  rm -f /tmp/helm-* /tmp/sops-* /tmp/age-* /tmp/helmfile_* /tmp/yq_* /tmp/kubectl /tmp/krew-* /tmp/kubeseal-* /tmp/kustomize_* && \
+  rm -f /tmp/helm-* /tmp/sops-* /tmp/age-* /tmp/helmfile_* /tmp/yq /tmp/kubectl /tmp/krew-* /tmp/kubeseal-* /tmp/kustomize_* && \
   true
 
 COPY src/*.sh /usr/local/bin/
