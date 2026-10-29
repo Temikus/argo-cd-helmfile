@@ -131,7 +131,7 @@ ARG YQ_SHA256_ARM64="189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d5
 
 # relevant for kubectl if installed
 # renovate: datasource=github-releases depName=bitnami-labs/sealed-secrets
-ARG KUBESEAL_VERSION="0.41.1"
+ARG KUBESEAL_VERSION="0.41.2"
 # curl -v -L 'https://dl.k8s.io/release/stable.txt'
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
 ARG KUBECTL_VERSION="v1.37.1"
