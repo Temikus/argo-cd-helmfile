@@ -248,8 +248,8 @@ ARG HELM_GIT_VERSION="v1.5.2"
 ARG HELM_GIT_SHA="8f910e377bf743cc07ce963a696b1e7929aebb80"
 # https://github.com/jkroepke/helm-secrets/releases
 # renovate: datasource=github-tags depName=jkroepke/helm-secrets
-ARG HELM_SECRETS_VERSION="v4.7.9"
-ARG HELM_SECRETS_SHA="43597f7edf454c177059942133c4dd4b1afbe0a3"
+ARG HELM_SECRETS_VERSION="v4.7.10"
+ARG HELM_SECRETS_SHA="1e3b39336636b13df0ab292322231a95bc9e6041"
 
 RUN \
   install_helm_plugin() { \
