@@ -134,7 +134,7 @@ ARG YQ_SHA256_ARM64="189088da0c6429ec5178dfaab1a114805f6cab0b61b165ab236efedf1d5
 ARG KUBESEAL_VERSION="0.41.2"
 # curl -v -L 'https://dl.k8s.io/release/stable.txt'
 # renovate: datasource=github-releases depName=kubernetes/kubernetes
-ARG KUBECTL_VERSION="v1.37.1"
+ARG KUBECTL_VERSION="v1.37.2"
 # https://github.com/kubernetes-sigs/krew/releases/
 # renovate: datasource=github-releases depName=kubernetes-sigs/krew
 ARG KREW_VERSION="v0.5.0"
