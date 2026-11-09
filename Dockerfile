@@ -114,7 +114,7 @@ ARG AGE_SHA256_ARM64="6b8dc4333c53a5a57c9e5834e3a48f92605d7154014cd07269ff3327db
 ARG HELM3_VERSION="v3.22.1"
 # https://github.com/helmfile/helmfile/releases
 # renovate: datasource=github-releases depName=helmfile/helmfile
-ARG HELMFILE_VERSION="1.8.2"
+ARG HELMFILE_VERSION="1.8.3"
 # https://github.com/kubernetes-sigs/kustomize/releases
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize/v(?<version>.+)$
 ARG KUSTOMIZE5_VERSION="5.8.3"
